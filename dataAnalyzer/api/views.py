@@ -1,8 +1,10 @@
 import pandas as pd
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 df = None
 
+@csrf_exempt
 def detect_data_types(request):
     if request.method == 'POST' and request.FILES['csv_file']:
         csv_file = request.FILES['csv_file']
