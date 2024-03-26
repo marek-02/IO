@@ -9,7 +9,14 @@ def detect_data_types(request):
     if request.method == 'POST' and request.FILES['csv_file']:
         csv_file = request.FILES['csv_file']
 
-        df = pd.read_csv(csv_file)
+        df = pd.read_csv(csv_file, sep=';', decimal=',')
+
+        object_columns = df.select_dtypes(include=['object']).columns
+        for column in object_columns:
+            try:
+                df[column] = pd.to_datetime(df[column], errors='raise')
+            except ValueError:
+                pass
 
         data_types = df.dtypes
 
