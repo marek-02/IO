@@ -1,11 +1,24 @@
 import pandas as pd
+import numpy as np
+import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 df = None
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+
 @csrf_exempt
 def detect_data_types(request):
+    global df
     if request.method == 'POST' and request.FILES['csv_file']:
         csv_file = request.FILES['csv_file']
 
@@ -22,8 +35,10 @@ def detect_data_types(request):
 
         data_types_dict = data_types.apply(lambda x: x.name).to_dict()
 
+        df = df.replace(np.nan, None)
+        
         data_records = df.to_dict(orient='records')
-
+        
         response_data = {
             'data_types': data_types_dict,
             'data_records': data_records
@@ -33,8 +48,9 @@ def detect_data_types(request):
     else:
         return JsonResponse({'error': 'Proszę przesłać plik CSV.'}, status=400)
 
-
+@csrf_exempt
 def change_variable_name(request):
+    global df
     if request.method == 'POST' and 'old_name' in request.POST and 'new_name' in request.POST:
         old_name = request.POST['old_name']
         new_name = request.POST['new_name']
@@ -42,8 +58,10 @@ def change_variable_name(request):
         if old_name and new_name:
             if old_name in df.columns:
                 df.rename(columns={old_name: new_name}, inplace=True)
-
-                return JsonResponse({'success': True})
+                data_types = df.dtypes
+                data_types_dict = data_types.apply(lambda x: x.name).to_dict()
+                data_records = df.to_dict(orient='records')
+                return JsonResponse({'success': True, 'data_types': data_types_dict, 'data_records': data_records})
             else:
                 return JsonResponse({'success': False, 'error': f'Zmienna o nazwie "{old_name}" nie istnieje w pliku CSV.'})
         else:
@@ -51,7 +69,7 @@ def change_variable_name(request):
     else:
         return JsonResponse({'success': False, 'error': 'Proszę przesłać starą i nową nazwę zmiennej w zapytaniu POST.'})
 
-
+@csrf_exempt
 def change_variable_type(request):
     if request.method == 'POST' and 'column_name' in request.POST and 'new_type' in request.POST:
         column_name = request.POST['column_name']
@@ -60,10 +78,15 @@ def change_variable_type(request):
         if column_name and new_type:
             if column_name in df.columns:
                 try:
+                    df[column_name] = df[column_name].fillna(-1)
                     df[column_name] = df[column_name].astype(new_type)
+                    df[column_name] = df[column_name].replace(-1, None)
                 except ValueError:
                     return JsonResponse({'success': False, 'error': f'Nie można przekonwertować kolumny "{column_name}" na typ "{new_type}". Sprawdź, czy wszystkie wartości są zgodne z nowym typem danych.'})
-                return JsonResponse({'success': True})
+                data_types = df.dtypes
+                data_types_dict = data_types.apply(lambda x: x.name).to_dict()
+                data_records = df.to_dict(orient='records')
+                return JsonResponse({'success': True, 'data_types': data_types_dict, 'data_records': data_records})
             else:
                 return JsonResponse({'success': False, 'error': f'Kolumna "{column_name}" nie istnieje w pliku CSV.'})
         else:
@@ -71,14 +94,16 @@ def change_variable_type(request):
     else:
         return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny, nową nazwę i nowy typ danych w zapytaniu POST.'})
 
+@csrf_exempt
 def generate_statistics(request):
     if request.method == 'GET':
         statistics = {}
 
         for column in df.columns:
             column_data = df[column]
-
-            if pd.api.types.is_numeric_dtype(column_data):
+            if column == "Timestamp":
+                continue
+            elif pd.api.types.is_numeric_dtype(column_data):
                 stats = {
                     'min': column_data.min(),
                     'max': column_data.max(),
@@ -108,10 +133,13 @@ def generate_statistics(request):
 
             statistics[column] = stats
 
-        return JsonResponse(statistics)
+        print(statistics)
+        statistics = json.dumps(statistics, cls=NpEncoder)
+        return JsonResponse(statistics, safe=False)
     else:
         return JsonResponse({'error': 'Proszę przesłać plik CSV.'}, status=400)
 
+@csrf_exempt
 def delete_data(request):
     if request.method == 'POST' and 'axis' in request.POST and 'index' in request.POST:
         axis = request.POST['axis']
@@ -130,10 +158,14 @@ def delete_data(request):
                 df.drop(columns=column_name, inplace=True)
             else:
                 return JsonResponse({'error': 'Podana kolumna nie istnieje w ramce danych.'}, status=400)
-        return JsonResponse({'success': True})
+        data_types = df.dtypes
+        data_types_dict = data_types.apply(lambda x: x.name).to_dict()
+        data_records = df.to_dict(orient='records')
+        return JsonResponse({'success': True, 'data_types': data_types_dict, 'data_records': data_records})
     else:
         return JsonResponse({'error': 'Proszę przesłać plik CSV oraz określić, czy chcesz usunąć wiersz (ustawienie "rows") lub kolumnę (ustawienie "columns") oraz podać indeks wiersza lub nazwę kolumny, który chcesz usunąć.'}, status=400)
 
+@csrf_exempt
 def fill_missing_data(request):
     if request.method == 'POST' and 'column' in request.POST and 'statistic' in request.POST:
         column_name = request.POST['column']
@@ -169,12 +201,15 @@ def fill_missing_data(request):
                 else:
                     return JsonResponse({'error': f'Nieprawidłowa statystyka "{statistic}" dla kolumny numerycznej "{column_name}". Wybierz jedną z: "min", "max", "mean", "median", "mode", "range", "variance", "standard_deviation", "coefficient_of_variation", "skewness", "kurtosis".'}, status=400)
             else:
+                print("nienumeryczna")
                 if statistic == 'mode':
                     df[column_name].fillna(df[column_name].mode().values[0], inplace=True)
                 else:
                     return JsonResponse({'error': f'Nieprawidłowa statystyka "{statistic}" dla kolumny kategorycznej "{column_name}". Wybierz jedną z: "mode".'}, status=400)
-
-            return JsonResponse({'success': True})
+            data_types = df.dtypes
+            data_types_dict = data_types.apply(lambda x: x.name).to_dict()
+            data_records = df.to_dict(orient='records')
+            return JsonResponse({'success': True, 'data_types': data_types_dict, 'data_records': data_records})
         else:
             return JsonResponse({'error': f'Kolumna "{column_name}" nie zawiera brakujących danych.'}, status=400)
     else:
