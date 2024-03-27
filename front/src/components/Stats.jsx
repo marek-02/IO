@@ -1,0 +1,72 @@
+import React, { useState, useContext } from 'react';
+import { DataContext } from '../contexts/DataContext';
+
+export const Stats = () => {
+    const { dropdownValue } = useContext(DataContext);
+
+    const [ jsonStats, setJsonStats ] = useState([]);
+
+    const [ stats, setStats ] = useState([]);
+
+    const [ renderMode, setRenderMode ] = useState('a');
+
+    let json = null;
+
+    const handleStatsRequest = async (e) => {
+        e.preventDefault();
+        json = null;
+        try {
+            await fetch('http://127.0.0.1:8000/api/stats/', {
+                method: 'GET',
+            }).then(e => {
+                if (e.status === 200) {
+                    e.json().then(e => {
+                        setStats(e);
+                        setRenderMode('c');
+                    })
+                }
+                else alert("cos poszlo nie tak")
+            })
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    const logging = () => {
+        console.log(json);
+    }
+
+    const convertToJson = () => {
+        json = JSON.parse(stats)[dropdownValue];
+        setJsonStats(json);
+        setRenderMode('b');
+    }
+
+    if (renderMode === 'a') {
+        return <div>
+        <form onSubmit={handleStatsRequest}>
+            <input type="submit" value="Get stats" />
+        </form>
+        <button onClick={logging}>log</button>
+        </div>
+    }
+    else if (renderMode === 'b') {
+        return <div>
+            <p>Statystyki dla: {dropdownValue}</p>
+            {Object.keys(jsonStats).map((o) => (
+                <p>{o}: {JSON.stringify(jsonStats[o])}</p>
+            ))}
+            <div>
+                <form onSubmit={handleStatsRequest}>
+                    <input type="submit" value="Refresh stats" />
+                </form>
+            </div>
+        </div>
+    }
+    else if (renderMode === 'c') {
+        return <div>
+            <button onClick={convertToJson}>Convert data</button>
+            <button onClick={logging}>log</button>
+        </div>
+    }
+}
