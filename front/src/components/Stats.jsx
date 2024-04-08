@@ -6,23 +6,20 @@ export const Stats = () => {
 
     const [ jsonStats, setJsonStats ] = useState([]);
 
-    const [ stats, setStats ] = useState([]);
-
     const [ renderMode, setRenderMode ] = useState('a');
 
-    let json = null;
 
     const handleStatsRequest = async (e) => {
         e.preventDefault();
-        json = null;
         try {
             await fetch('http://127.0.0.1:8000/api/stats/', {
                 method: 'GET',
             }).then(e => {
                 if (e.status === 200) {
                     e.json().then(e => {
-                        setStats(e);
-                        setRenderMode('c');
+                        let myJson = convertToJson(e);
+                        setJsonStats(myJson);
+                        setRenderMode('b');
                     })
                 }
                 else alert("cos poszlo nie tak")
@@ -33,12 +30,12 @@ export const Stats = () => {
     }
 
     const logging = () => {
-        console.log(json);
+        console.log(jsonStats);
     }
 
-    const convertToJson = () => {
-        json = JSON.parse(stats)[dropdownValue];
-        setJsonStats(json);
+    const convertToJson = (jsonString) => {
+        let myJson = JSON.parse(jsonString)[dropdownValue];
+        setJsonStats(myJson);
         setRenderMode('b');
     }
 

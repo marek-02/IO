@@ -1,9 +1,8 @@
-import { AreaChartComponent } from './components/AreaChart';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { CSVParser } from './components/CSVParser';
 import { DataContextProvider } from './contexts/DataContext'; 
 import './App.css';
 import { ChartContextProvider } from './contexts/ChartContext';
+import { MainPage } from './pages/MainPage';
 
 
 function App() {
@@ -13,8 +12,7 @@ function App() {
         <ChartContextProvider>
           <Router>
             <Routes>
-              <Route path='/' element={<CSVParser />} />
-              <Route path='chart' element={<AreaChartComponent />} />
+              <Route path='/' element={<MainPage />} />
             </Routes>
           </Router>
         </ChartContextProvider>

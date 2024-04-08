@@ -4,6 +4,28 @@ export const DataContext = createContext(null);
 const allowedExtensions = ["csv"];
 
 export const DataContextProvider = (props) => {
+    const defaultData = [
+        {
+            "name": "name",
+            "type": "type",
+            "min": "min",
+            "max": "max",
+            "mean": "mean",
+            "median": "median",
+            "mode": "mode",
+            "range": "range",
+            "quantiles": "quantiles",
+            "variance": "variance",
+            "standard_deviation": "standard_deviation",
+            "coefficient_of_variation": "coefficient_of_variation",
+            "skewness": "skewness",
+            "kurtosis": "kurtosis",
+            "count": "count",
+            "missing": "missing",
+            "missing_data_percentage": "missingPer"
+        }
+    ]
+
     const [data, setData] = useState([]);
 
     const [keys, setKeys] = useState([]);
@@ -19,6 +41,10 @@ export const DataContextProvider = (props) => {
     const [file, setFile] = useState(null);
 
     const [size, setSize] = useState(null);
+
+    const [tableData, setTableData] = useState(defaultData);
+
+    const [isTableDataSet, setIsTableDataSet] = useState(false);
 
     const handleFileChange = (e) => {
         setError("");
@@ -37,7 +63,7 @@ export const DataContextProvider = (props) => {
         }
     };
 
-    const contextValue = {file, data, error, keys, types, variable, dropdownValue, size, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize}
+    const contextValue = {file, data, error, keys, types, variable, dropdownValue, size, tableData, isTableDataSet, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize, setTableData, setIsTableDataSet}
     return (
         <DataContext.Provider value={contextValue}>
             {props.children}
