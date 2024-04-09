@@ -31,14 +31,15 @@ def detect_data_types(request):
             except ValueError:
                 pass
 
+        df = df.convert_dtypes()
+        
         data_types = df.dtypes
 
         data_types_dict = data_types.apply(lambda x: x.name).to_dict()
-
-        df = df.replace(np.nan, None)
         
         data_records = df.to_dict(orient='records')
-        
+
+        print(data_types_dict)
         response_data = {
             'data_types': data_types_dict,
             'data_records': data_records
@@ -71,6 +72,7 @@ def change_variable_name(request):
 
 @csrf_exempt
 def change_variable_type(request):
+    global df
     if request.method == 'POST' and 'column_name' in request.POST and 'new_type' in request.POST:
         column_name = request.POST['column_name']
         new_type = request.POST['new_type']
@@ -78,9 +80,11 @@ def change_variable_type(request):
         if column_name and new_type:
             if column_name in df.columns:
                 try:
-                    df[column_name] = df[column_name].fillna(-1)
                     df[column_name] = df[column_name].astype(new_type)
-                    df[column_name] = df[column_name].replace(-1, None)
+                    data_types = df.dtypes
+
+                    data_types_dict = data_types.apply(lambda x: x.name).to_dict()
+                    print(data_types_dict)
                 except ValueError:
                     return JsonResponse({'success': False, 'error': f'Nie można przekonwertować kolumny "{column_name}" na typ "{new_type}". Sprawdź, czy wszystkie wartości są zgodne z nowym typem danych.'})
                 data_types = df.dtypes
@@ -92,10 +96,11 @@ def change_variable_type(request):
         else:
             return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny, nową nazwę i nowy typ danych w zapytaniu POST.'})
     else:
-        return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny, nową nazwę i nowy typ danych w zapytaniu POST.'})
+        return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny i nowy typ danych w zapytaniu POST.'})
 
 @csrf_exempt
 def generate_statistics(request):
+    global df
     if request.method == 'GET':
         statistics = {}
 
@@ -103,7 +108,7 @@ def generate_statistics(request):
             column_data = df[column]
             if column == "Timestamp":
                 continue
-            elif pd.api.types.is_numeric_dtype(column_data):
+            elif df[column].dtype in ["Int64", "Float64"]:
                 stats = {
                     'min': column_data.min(),
                     'max': column_data.max(),
@@ -120,20 +125,20 @@ def generate_statistics(request):
                 }
             else:
                 stats = {
-                    'count': column_data.count(),
                     'count_percentage': column_data.value_counts(normalize=True).to_dict(),
                     'sum': column_data.value_counts().to_dict()
                 }
 
+            data_count = len(df)
             missing_data_count = df[column].isnull().sum()
             missing_data_percentage = (missing_data_count / len(df)) * 100
 
+            stats['count'] = data_count
             stats['missing_data_count'] = missing_data_count
             stats['missing_data_percentage'] = missing_data_percentage
-
+            
             statistics[column] = stats
 
-        print(statistics)
         statistics = json.dumps(statistics, cls=NpEncoder)
         return JsonResponse(statistics, safe=False)
     else:
@@ -141,6 +146,7 @@ def generate_statistics(request):
 
 @csrf_exempt
 def delete_data(request):
+    global df
     if request.method == 'POST' and 'axis' in request.POST and 'index' in request.POST:
         axis = request.POST['axis']
         if axis not in ['rows', 'columns']:
@@ -167,6 +173,7 @@ def delete_data(request):
 
 @csrf_exempt
 def fill_missing_data(request):
+    global df
     if request.method == 'POST' and 'column' in request.POST and 'statistic' in request.POST:
         column_name = request.POST['column']
         statistic = request.POST['statistic']
@@ -175,7 +182,7 @@ def fill_missing_data(request):
             return JsonResponse({'error': f'Kolumna "{column_name}" nie istnieje w ramce danych.'}, status=400)
 
         if df[column_name].isnull().any():
-            if pd.api.types.is_numeric_dtype(df[column_name]):
+            if df[column_name].dtype in ["Int64", "Float64"]:
                 if statistic == 'min':
                     df[column_name].fillna(df[column_name].min(), inplace=True)
                 elif statistic == 'max':
