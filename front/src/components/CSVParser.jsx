@@ -141,6 +141,6 @@ export const CSVParser = () => {
             )
             }
         </select><br />
-        <button onClick={requestStats}>show table</button>
+        <button onClick={requestStats}>Show table</button>
     </div>
 }
