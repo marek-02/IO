@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from scipy.stats import chi2_contingency, ttest_ind, f_oneway
 from statsmodels.stats.weightstats import ztest
+import csv
 
 df = None
 
@@ -101,7 +102,7 @@ def change_variable_type(request):
         return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny i nowy typ danych w zapytaniu POST.'})
 
 @csrf_exempt
-def generate_statistics(request):
+def generate_statistics_1d(request):
     global df
     if request.method == 'GET':
         statistics = {}
@@ -291,7 +292,7 @@ def fill_outliers(request):
     
 
 @csrf_exempt
-def calculate_statistics(request):
+def generate_statistics_2d(request):
     global df
     if request.method == 'GET':
         statistics = {}
@@ -344,5 +345,25 @@ def calculate_statistics(request):
                         statistics[f'{col1} - {col2}']['p_value_anova'] = p_value_anova
 
         return JsonResponse(statistics)
+    else:
+        return JsonResponse({'error': 'Metoda GET jest wymagana.'}, status=400)
+    
+
+@csrf_exempt
+def download_modified_dataframe(request):
+    global df
+
+    if request.method == 'GET':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="result.csv"'
+
+        writer = csv.writer(response)
+
+        writer.writerow(df.columns)
+
+        for index, row in df.iterrows():
+            writer.writerow(row)
+
+        return response
     else:
         return JsonResponse({'error': 'Metoda GET jest wymagana.'}, status=400)
