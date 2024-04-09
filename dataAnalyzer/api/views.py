@@ -94,7 +94,7 @@ def change_variable_type(request):
             else:
                 return JsonResponse({'success': False, 'error': f'Kolumna "{column_name}" nie istnieje w pliku CSV.'})
         else:
-            return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny, nową nazwę i nowy typ danych w zapytaniu POST.'})
+            return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny i nowy typ danych w zapytaniu POST.'})
     else:
         return JsonResponse({'success': False, 'error': 'Proszę przesłać nazwę kolumny i nowy typ danych w zapytaniu POST.'})
 
@@ -109,6 +109,11 @@ def generate_statistics(request):
             if column == "Timestamp":
                 continue
             elif df[column].dtype in ["Int64", "Float64"]:
+                q1 = column_data.quantile(0.25)
+                q3 = column_data.quantile(0.75)
+                iqr = q3 - q1
+                outliers_count = ((column_data < (q1 - 1.5 * iqr)) | (column_data > (q3 + 1.5 * iqr))).sum()
+
                 stats = {
                     'min': column_data.min(),
                     'max': column_data.max(),
@@ -121,7 +126,8 @@ def generate_statistics(request):
                     'standard_deviation': column_data.std(),
                     'coefficient_of_variation': column_data.std() / column_data.mean(),
                     'skewness': column_data.skew(),
-                    'kurtosis': column_data.kurtosis()
+                    'kurtosis': column_data.kurtosis(),
+                    'outliers_count': outliers_count
                 }
             else:
                 stats = {
@@ -208,7 +214,6 @@ def fill_missing_data(request):
                 else:
                     return JsonResponse({'error': f'Nieprawidłowa statystyka "{statistic}" dla kolumny numerycznej "{column_name}". Wybierz jedną z: "min", "max", "mean", "median", "mode", "range", "variance", "standard_deviation", "coefficient_of_variation", "skewness", "kurtosis".'}, status=400)
             else:
-                print("nienumeryczna")
                 if statistic == 'mode':
                     df[column_name].fillna(df[column_name].mode().values[0], inplace=True)
                 else:
@@ -221,3 +226,63 @@ def fill_missing_data(request):
             return JsonResponse({'error': f'Kolumna "{column_name}" nie zawiera brakujących danych.'}, status=400)
     else:
         return JsonResponse({'error': 'Proszę przesłać plik CSV, nazwę kolumny oraz statystykę do uzupełnienia brakujących danych w zapytaniu POST.'}, status=400)
+    
+
+@csrf_exempt
+def fill_outliers(request):
+    global df
+    if request.method == 'POST' and 'column' in request.POST and 'statistic' in request.POST:
+        column_name = request.POST['column']
+        statistic = request.POST['statistic']
+
+        if column_name not in df.columns:
+            return JsonResponse({'error': f'Kolumna "{column_name}" nie istnieje w ramce danych.'}, status=400)
+
+        if df[column_name].dtype in ["Int64", "Float64"]:
+            q1 = df[column_name].quantile(0.25)
+            q3 = df[column_name].quantile(0.75)
+            iqr = q3 - q1
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+
+            outliers_mask = (df[column_name] < lower_bound) | (df[column_name] > upper_bound)
+
+            if outliers_mask.any():
+                if statistic == 'min':
+                    replacement_value = df[column_name].min()
+                elif statistic == 'max':
+                    replacement_value = df[column_name].max()
+                elif statistic == 'mean':
+                    replacement_value = df[column_name].mean()
+                elif statistic == 'median':
+                    replacement_value = df[column_name].median()
+                elif statistic == 'mode':
+                    replacement_value = df[column_name].mode().values[0]
+                elif statistic == 'range':
+                    replacement_value = df[column_name].max() - df[column_name].min()
+                elif statistic == 'variance':
+                    replacement_value = df[column_name].var()
+                elif statistic == 'standard_deviation':
+                    replacement_value = df[column_name].std()
+                elif statistic == 'coefficient_of_variation':
+                    replacement_value = df[column_name].std() / df[column_name].mean()
+                elif statistic == 'skewness':
+                    replacement_value = df[column_name].skew()
+                elif statistic == 'kurtosis':
+                    replacement_value = df[column_name].kurtosis()
+                else:
+                    return JsonResponse({'error': f'Nieprawidłowa statystyka "{statistic}" dla kolumny numerycznej "{column_name}". Wybierz jedną z: "min", "max", "mean", "median", "mode", "range", "variance", "standard_deviation", "coefficient_of_variation", "skewness", "kurtosis".'}, status=400)
+
+                df.loc[outliers_mask, column_name] = replacement_value
+
+                data_types = df.dtypes
+                data_types_dict = data_types.apply(lambda x: x.name).to_dict()
+                data_records = df.to_dict(orient='records')
+
+                return JsonResponse({'success': True, 'data_types': data_types_dict, 'data_records': data_records})
+            else:
+                return JsonResponse({'error': f'Kolumna "{column_name}" nie zawiera wartości odstających.'}, status=400)
+        else:
+            return JsonResponse({'error': f'Kolumna "{column_name}" nie jest numeryczna.'}, status=400)
+    else:
+        return JsonResponse({'error': 'Proszę przesłać nazwę kolumny oraz statystykę do uzupełnienia wartości odstających w zapytaniu POST.'}, status=400)
