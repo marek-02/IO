@@ -3,6 +3,8 @@ import numpy as np
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from scipy.stats import chi2_contingency, ttest_ind, f_oneway
+from statsmodels.stats.weightstats import ztest
 
 df = None
 
@@ -286,3 +288,61 @@ def fill_outliers(request):
             return JsonResponse({'error': f'Kolumna "{column_name}" nie jest numeryczna.'}, status=400)
     else:
         return JsonResponse({'error': 'Proszę przesłać nazwę kolumny oraz statystykę do uzupełnienia wartości odstających w zapytaniu POST.'}, status=400)
+    
+
+@csrf_exempt
+def calculate_statistics(request):
+    global df
+    if request.method == 'GET':
+        statistics = {}
+
+        for i, col1 in enumerate(df.columns):
+            for j, col2 in enumerate(df.columns):
+                if i >= j:
+                    continue  
+
+                data1 = df[col1]
+                data2 = df[col2]
+
+                is_numeric1 = df[col1].dtype in ["Int64", "Float64"]
+                is_numeric2 = df[col2].dtype in ["Int64", "Float64"]
+                is_categorical1 = not is_numeric1
+                is_categorical2 = not is_numeric2
+
+                if is_numeric1 and is_numeric2:
+                    correlation = data1.corr(data2)
+                    statistics[f'{col1} - {col2}'] = {'correlation': correlation}
+                elif is_categorical1 and is_categorical2:
+                    contingency_table = pd.crosstab(data1, data2)
+                    chi2_stat, p_value, _, _ = chi2_contingency(contingency_table)
+                    statistics[f'{col1} - {col2}'] = {'chi2_stat': chi2_stat, 'p_value': p_value}
+                else:
+                    if is_categorical1 and is_numeric2:
+                        z_stat, p_value_z = ztest(data2, x2=data1)
+                        statistics[f'{col1} - {col2}'] = {'z_stat': z_stat, 'p_value_z': p_value_z}
+
+                        t_stat, p_value_t = ttest_ind(data1, data2)
+                        statistics[f'{col1} - {col2}']['t_stat'] = t_stat
+                        statistics[f'{col1} - {col2}']['p_value_t'] = p_value_t
+
+                        #ANOVA
+                        f_stat, p_value_anova = f_oneway(data1, data2)
+                        statistics[f'{col1} - {col2}']['f_stat'] = f_stat
+                        statistics[f'{col1} - {col2}']['p_value_anova'] = p_value_anova
+
+                    elif is_numeric1 and is_categorical2:
+                        z_stat, p_value_z = ztest(data1, x2=data2)
+                        statistics[f'{col1} - {col2}'] = {'z_stat': z_stat, 'p_value_z': p_value_z}
+
+                        t_stat, p_value_t = ttest_ind(data1, data2)
+                        statistics[f'{col1} - {col2}']['t_stat'] = t_stat
+                        statistics[f'{col1} - {col2}']['p_value_t'] = p_value_t
+
+                        #ANOVA
+                        f_stat, p_value_anova = f_oneway(data1, data2)
+                        statistics[f'{col1} - {col2}']['f_stat'] = f_stat
+                        statistics[f'{col1} - {col2}']['p_value_anova'] = p_value_anova
+
+        return JsonResponse(statistics)
+    else:
+        return JsonResponse({'error': 'Metoda GET jest wymagana.'}, status=400)
