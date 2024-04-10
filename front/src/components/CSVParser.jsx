@@ -90,7 +90,7 @@ export const CSVParser = () => {
 
     const requestStats = async () => {
         try {
-            await fetch('http://127.0.0.1:8000/api/stats/', {
+            await fetch('http://127.0.0.1:8000/api/stats/1d', {
                 method: 'GET',
             }).then(e => {
                 if (e.status === 200) {

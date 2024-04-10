@@ -92,6 +92,47 @@ button:hover {
     background-color: #218838;
 }
 
+.personalizer {
+    align-items: center;
+    justify-content: center;
+    margin: 20px;
+}
+
+.personalizer label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.personalizer input[type="text"],
+.personalizer select {
+    max-width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.personalizer input[type="submit"] {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+.refresh {
+    margin-top: 40px;
+    align-items: center;
+    justify-content: center;
+}
+
 .error-message {
     color: red;
     margin-top: 10px;

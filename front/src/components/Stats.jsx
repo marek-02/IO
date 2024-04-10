@@ -12,7 +12,7 @@ export const Stats = () => {
     const handleStatsRequest = async (e) => {
         e.preventDefault();
         try {
-            await fetch('http://127.0.0.1:8000/api/stats/', {
+            await fetch('http://127.0.0.1:8000/api/stats/1d', {
                 method: 'GET',
             }).then(e => {
                 if (e.status === 200) {
@@ -41,7 +41,7 @@ export const Stats = () => {
 
     if (renderMode === 'a') {
         return <div>
-        <form onSubmit={handleStatsRequest}>
+        <form className='refresh' onSubmit={handleStatsRequest}>
             <input type="submit" value="Get stats" />
         </form>
         <button onClick={logging}>log</button>
@@ -54,7 +54,7 @@ export const Stats = () => {
                 <p>{o}: {JSON.stringify(jsonStats[o])}</p>
             ))}
             <div>
-                <form onSubmit={handleStatsRequest}>
+                <form className='refresh' onSubmit={handleStatsRequest}>
                     <input type="submit" value="Refresh stats" />
                 </form>
             </div>

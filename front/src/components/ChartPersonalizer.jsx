@@ -153,12 +153,12 @@ export const ChartPersonalizer = () => {
                 <option value={o}>{o}</option>
             ))}
         </select><br />
-        <form method='POST' onSubmit={submitVariableNameChange}>
+        <form method='POST' className='personalizer' onSubmit={submitVariableNameChange}>
             <label htmlFor="var" style={{ display: "block" }}>Change Variable Name</label>
             <input onChange={handleVariableNameChange} id="varInput" name="var" type="text" placeholder='New variable name'/><br />
             <input type="submit" value="Submit" />
         </form>
-        <form method='POST' onSubmit={submitVariableTypeChange}>
+        <form method='POST' className='personalizer' onSubmit={submitVariableTypeChange}>
             <select onChange={handleTypeDropdown}>
                 <option value="" selected disabled hidden>Choose type</option>
                 {all_types.map((o) => (
@@ -167,7 +167,7 @@ export const ChartPersonalizer = () => {
             </select>
             <input type="submit" value="Submit" />
         </form>
-        <form method='POST' onSubmit={submitDataDelete}>
+        <form method='POST' className='personalizer' onSubmit={submitDataDelete}>
             <label htmlFor="del" style={{ display: "block" }}>Delete data</label>
             <input onChange={handleDataToDeleteChange} id="varInput" name="del" type="text" placeholder='New variable name'/><br />
             <select onChange={handleDeleteDropdown}>
@@ -176,7 +176,7 @@ export const ChartPersonalizer = () => {
             </select>
             <input type="submit" value="Submit" />
         </form>
-        <form method='POST' onSubmit={submitDataFill}>
+        <form method='POST' className='personalizer' onSubmit={submitDataFill}>
             <label style={{ display: "block" }}>Fill data</label>
             <select onChange={handleFillDropdown}>
                 <option value="min">min</option>
