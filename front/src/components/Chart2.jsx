@@ -23,7 +23,7 @@ export const ChartComponent2 = () => {
         const dataType = types[variable];
 
         let chartComponent2 = null;
-            if (!(dataType === 'Int64' || dataType === 'Float64')) {
+            if ((dataType === 'Int64' || dataType === 'Float64')) {
             chartComponent2 = (
                 <ResponsiveContainer width="100%" aspect={3}>
                 <ScatterChart
