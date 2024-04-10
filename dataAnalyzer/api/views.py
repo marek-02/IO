@@ -37,12 +37,19 @@ def detect_data_types(request):
         df = df.convert_dtypes()
         
         data_types = df.dtypes
+        
+        print(data_types)
 
         data_types_dict = data_types.apply(lambda x: x.name).to_dict()
         
         data_records = df.to_dict(orient='records')
 
         print(data_types_dict)
+        
+        for key in data_types_dict:
+            if "ID" in key:
+                data_types_dict[key] = 'Object'
+        
         response_data = {
             'data_types': data_types_dict,
             'data_records': data_records
@@ -87,7 +94,7 @@ def change_variable_type(request):
                     data_types = df.dtypes
 
                     data_types_dict = data_types.apply(lambda x: x.name).to_dict()
-                    print(data_types_dict)
+                    # print(data_types_dict)
                 except ValueError:
                     return JsonResponse({'success': False, 'error': f'Nie można przekonwertować kolumny "{column_name}" na typ "{new_type}". Sprawdź, czy wszystkie wartości są zgodne z nowym typem danych.'})
                 data_types = df.dtypes
@@ -109,7 +116,7 @@ def generate_statistics_1d(request):
 
         for column in df.columns:
             column_data = df[column]
-            if column == "Timestamp":
+            if column_data.dtype in ["<M8[ns]", "datetime64[ns]"]:
                 continue
             elif df[column].dtype in ["Int64", "Float64"]:
                 q1 = column_data.quantile(0.25)
@@ -305,6 +312,9 @@ def generate_statistics_2d(request):
                 data1 = df[col1]
                 data2 = df[col2]
 
+                if data1.dtype in ["<M8[ns]", "datetime64[ns]"] or data2.dtype in ["<M8[ns]", "datetime64[ns]"]:
+                    continue
+                
                 is_numeric1 = df[col1].dtype in ["Int64", "Float64"]
                 is_numeric2 = df[col2].dtype in ["Int64", "Float64"]
                 is_categorical1 = not is_numeric1
@@ -344,6 +354,7 @@ def generate_statistics_2d(request):
                         statistics[f'{col1} - {col2}']['f_stat'] = f_stat
                         statistics[f'{col1} - {col2}']['p_value_anova'] = p_value_anova
 
+        print(statistics)
         return JsonResponse(statistics)
     else:
         return JsonResponse({'error': 'Metoda GET jest wymagana.'}, status=400)

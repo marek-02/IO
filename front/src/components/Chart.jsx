@@ -9,52 +9,36 @@ import {
     Tooltip,
     Legend,
     ResponsiveContainer,
-    AreaChart,
-    Area
   } from "recharts";
 import { DataContext } from '../contexts/DataContext';
-import { ChartPersonalizer } from './ChartPersonalizer';
-import { Stats } from './Stats';
 import { ChartContext } from '../contexts/ChartContext';
 
-export const AreaChartComponent = () => {
-    const { data, variable, showCharts, types } = useContext(DataContext);
+export const ChartComponent = () => {
+    const { data, variable, showCharts, types, dropdownValue } = useContext(DataContext);
 
     const { minIndex, maxIndex } = useContext(ChartContext);
 
-    const data2 = [
-        {
-          ID: 0,
-          Zmienna_A: 4000,
-          Zmienna_B: 2400,
-          Zmienna_C: 2400
-        },
-        {
-          ID: 1,
-          Zmienna_A: 3000,
-          Zmienna_B: 1398,
-          Zmienna_C: 2210
-        }
-      ];
+    const groupValuesIntoBins = (data, variable, numBins) => {
+      const values = data.map(entry => entry[variable]);
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
+      const binSize = (maxValue - minValue) / numBins;
+    
+      const bins = Array.from({ length: numBins }, (_, i) => ({
+        bin: `${minValue + i * binSize} - ${minValue + (i + 1) * binSize}`,
+        count: 0
+      }));
 
-      const groupValuesIntoBins = (data, variable, numBins) => {
-        const values = data.map(entry => entry[variable]);
-        const minValue = Math.min(...values);
-        const maxValue = Math.max(...values);
-        const binSize = (maxValue - minValue) / numBins;
-      
-        const bins = Array.from({ length: numBins }, (_, i) => ({
-          bin: `${minValue + i * binSize} - ${minValue + (i + 1) * binSize}`,
-          count: 0
-        }));
-      
-        values.forEach(value => {
-          const binIndex = Math.floor((value - minValue) / binSize);
-          bins[binIndex].count++;
-        });
-      
-        return bins;
-      };
+      console.log(bins);
+    
+      values.forEach(value => {
+        let binIndex = Math.floor((value - minValue) / binSize);
+        if (binIndex === numBins) binIndex -= 1;
+        bins[binIndex].count++;
+      });
+    
+      return bins;
+    };
 
 
     if (showCharts) {
@@ -62,14 +46,14 @@ export const AreaChartComponent = () => {
 
         let chartComponent = null;
 
-        if (dataType === 'Int64') {
+        if (!(dataType === 'Int64' || dataType === 'Float64')) {
             // Kategoryczna - wykres kolumnowy
             chartComponent = (
                 <ResponsiveContainer width="100%" aspect={3}>
                 <BarChart
                 width={500}
                 height={300}
-                data={data2}
+                data={data.slice(minIndex, maxIndex)}
                 margin={{
                     top: 5,
                     right: 30,
@@ -83,14 +67,14 @@ export const AreaChartComponent = () => {
                 <Tooltip />
                 <Legend />
                 <CartesianGrid strokeDasharray="3 3" />
-                <Bar dataKey="Zmienna_A" fill="#8884d8" background={{ fill: "#eee" }} />
+                <Bar dataKey={dropdownValue} fill="#8884d8" background={{ fill: "#eee" }} />
                 </BarChart>
                 </ResponsiveContainer>
             );
         } else {
-            // Inne - histogram
+            // Numeryczna - histogram
             const numBins = 10
-            const bins = groupValuesIntoBins(data2, 'Zmienna_A', numBins);
+            const bins = groupValuesIntoBins(data.slice(minIndex, maxIndex), dropdownValue, numBins);
             chartComponent = (
                 <ResponsiveContainer width="100%" height={400}>
                 <BarChart
@@ -112,8 +96,6 @@ export const AreaChartComponent = () => {
         return (
             <div>
                 {chartComponent}
-                <ChartPersonalizer />
-                <Stats />
             </div>
         );
     } else {

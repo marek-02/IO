@@ -16,7 +16,9 @@ export const ChartPersonalizer = () => {
 
     const [ fillData, setFillData ] = useState("");
 
-    const { keys, dropdownValue, variable, setVariable, setValue, setKeys, setData, setTypes, size } = useContext(DataContext);
+    const [ outlierData, setOutlierData ] = useState("");
+
+    const { keys, dropdownValue, variable, setVariable, setValue, setKeys, setData, setTypes, size, requestStats } = useContext(DataContext);
 
     const { minIndex, maxIndex, setMinIndex, setMaxIndex } = useContext(ChartContext)
 
@@ -45,6 +47,10 @@ export const ChartPersonalizer = () => {
         setFillData(e.target.value);
     }
 
+    const handleOutlierDropdown = (e) => {
+        setOutlierData(e.target.value);
+    }
+
     const handleMinIndexChange = (e) => {
         setMinIndex(e.target.value);
     }
@@ -68,6 +74,7 @@ export const ChartPersonalizer = () => {
                     setData(e.data_records);
                     setTypes(e.data_types);
                     setKeys(Object.keys(e.data_types));
+                    requestStats();
                 }
                 else alert(e.error);
             });
@@ -93,6 +100,7 @@ export const ChartPersonalizer = () => {
                     setData(e.data_records);
                     setTypes(e.data_types);
                     setKeys(Object.keys(e.data_types));
+                    requestStats();
                 }
                 else alert(e.error);
             });
@@ -116,6 +124,7 @@ export const ChartPersonalizer = () => {
                     setData(e.data_records);
                     setTypes(e.data_types);
                     setKeys(Object.keys(e.data_types));
+                    requestStats();
                 }
                 else alert(e.error);
             });
@@ -130,7 +139,7 @@ export const ChartPersonalizer = () => {
         formData.append('column', dropdownValue);
         formData.append('statistic', fillData);
         try {
-            await fetch('http://127.0.0.1:8000/api/fill/', {
+            await fetch('http://127.0.0.1:8000/api/fill/missings/', {
                 method: 'POST',
                 body: formData,
                 type: "no-cors"
@@ -139,6 +148,7 @@ export const ChartPersonalizer = () => {
                     setData(e.data_records);
                     setTypes(e.data_types);
                     setKeys(Object.keys(e.data_types));
+                    requestStats();
                 }
                 else alert(e.error);
             });
@@ -147,7 +157,74 @@ export const ChartPersonalizer = () => {
         }
     }
 
+    const submitOutlierFill = async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('column', dropdownValue);
+        formData.append('statistic', outlierData);
+        try {
+            await fetch('http://127.0.0.1:8000/api/fill/outliers/', {
+                method: 'POST',
+                body: formData,
+                type: "no-cors"
+            }).then(e => e.json()).then(e => {
+                if (e.success === true) {
+                    setData(e.data_records);
+                    setTypes(e.data_types);
+                    setKeys(Object.keys(e.data_types));
+                    requestStats();
+                }
+                else alert(e.error);
+            });
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    const handleDownload = async (e) => {
+        e.preventDefault();
+        try {
+            await fetch('http://127.0.0.1:8000/api/result/', {
+                method: 'GET',
+                type: "no-cors"
+            }).then(e => e.body)
+            .then(body => {
+                const reader = body.getReader();
+                return new ReadableStream({
+                    start(controller) {
+                        return pump();
+                        function pump() {
+                            return reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    controller.close();
+                                    return;
+                                }
+                            controller.enqueue(value);
+                            return pump();
+                            });
+                        }
+                    },
+                });
+            }).then(stream => new Response(stream))
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    const filename = "new_file.csv";
+                    link.setAttribute('download', filename);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                });
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     return <div>
+        <h1>Choose variable you want to edit</h1>
         <select value={variable} onChange={handleDropdown}>
             {keys.map((o) => (
                 <option value={o}>{o}</option>
@@ -193,9 +270,27 @@ export const ChartPersonalizer = () => {
             </select>
             <input type="submit" value="Submit" />
         </form>
+        <form method='POST' className='personalizer' onSubmit={submitOutlierFill}>
+            <label style={{ display: "block" }}>Fix outliers</label>
+            <select onChange={handleOutlierDropdown}>
+                <option value="min">min</option>
+                <option value="max">max</option>
+                <option value="mean">mean</option>
+                <option value="median">median</option>
+                <option value="mode">mode</option>
+                <option value="range">range</option>
+                <option value="variance">variance</option>
+                <option value="standard_deviation">standard deviation</option>
+                <option value="coefficient_of_variation">coefficient of variation</option>
+                <option value="skewness">skewness</option>
+                <option value="kurtosis">kurtosis</option>
+            </select>
+            <input type="submit" value="Submit" />
+        </form>
         <label style={{ display: "block" }}>Set minimal index</label>
         <input type='number' onChange={handleMinIndexChange} min={1} max={maxIndex} defaultValue={1}></input>
         <label style={{ display: "block" }}>Set maximal index</label>
-        <input type='number' onChange={handleMaxIndexChange} min={minIndex} max={size} defaultValue={size}></input>
+        <input type='number' onChange={handleMaxIndexChange} min={minIndex} max={size} defaultValue={size}></input> <br></br>
+        <button onClick={handleDownload}>Pobierz plik CSV</button>
     </div> 
 }

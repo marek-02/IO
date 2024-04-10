@@ -4,14 +4,9 @@ import { ChartContext } from '../contexts/ChartContext';
 
 export const CSVParser = () => {
 
-    const { file, error, keys, types, dropdownValue, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize, setTableData, setIsTableDataSet, setShowCharts } = useContext(DataContext);
+    const { file, error, handleFileChange, setData, setKeys, setTypes, setSize, setIsTableDataSet1D, setShowCharts, requestStats } = useContext(DataContext);
 
     const { setMaxIndex } = useContext(ChartContext);
-
-    const handleDropdown = (e) => {
-        setValue(e.target.value);
-        setVariable(e.target.value);
-    }
 
     const uploadFile = async (formData) => {
         try {
@@ -29,87 +24,7 @@ export const CSVParser = () => {
         } catch (e) {
             console.log(e);
         }
-    };
-
-    const prepareTableData = (myJson) => {
-        let newTableData = [];
-        for (let v of keys) {
-            let name = v;
-            let type = types[v];
-            let stats = myJson[v];
-            if (typeof stats === "undefined") continue;
-            let min = (typeof stats["min"] === "undefined") ? "-" : stats["min"];
-            let max = (typeof stats["max"] === "undefined") ? "-" : stats["max"];
-            let mean = (typeof stats["mean"] === "undefined") ? "-" : stats["mean"];
-            let median = (typeof stats["median"] === "undefined") ? "-" : stats["median"];
-            let mode = (typeof stats["mode"] === "undefined") ? "-" : stats["mode"];
-            let range = (typeof stats["range"] === "undefined") ? "-" : stats["range"];
-            let quantiles;
-            if (typeof stats["quantiles"] === "undefined") quantiles = "-";
-            else {
-                let quantileKeys = Object.keys(stats["quantiles"]);
-                let myStr = "";
-                for (let key of quantileKeys) {
-                    myStr += key + ": " + stats["quantiles"][key].toFixed(2) + "   ";
-                }
-                quantiles = myStr;
-            }
-            let variance = (typeof stats["variance"] === "undefined") ? "-" : stats["variance"];
-            let standard_deviation = (typeof stats["standard_deviation"] === "undefined") ? "-" : stats["standard_deviation"];
-            let coefficient_of_variation = (typeof stats["coefficient_of_variation"] === "undefined") ? "-" : stats["coefficient_of_variation"];
-            let skewness = (typeof stats["skewness"] === "undefined") ? "-" : stats["skewness"];
-            let kurtosis = (typeof stats["kurtosis"] === "undefined") ? "-" : stats["kurtosis"];
-            let count = (typeof stats["count"] === "undefined") ? "-" : stats["count"];
-            let missing = myJson[v]["missing_data_count"];
-            let missingPer = myJson[v]["missing_data_percentage"];
-            newTableData.push({
-                "name": name,
-                "type": type,
-                "min": min,
-                "max": max,
-                "mean": mean,
-                "median": median,
-                "mode": mode,
-                "range": range,
-                "quantiles": quantiles,
-                "variance": variance,
-                "standard_deviation": standard_deviation,
-                "coefficient_of_variation": coefficient_of_variation,
-                "skewness": skewness,
-                "kurtosis": kurtosis,
-                "count": count,
-                // "sum": sum,
-                "missing": missing,
-                "missing_data_percentage": missingPer
-            })
-        }
-        setTableData(newTableData);
-        setShowCharts(false);
-        setIsTableDataSet(true);
-    }
-
-    const requestStats = async () => {
-        try {
-            await fetch('http://127.0.0.1:8000/api/stats/1d', {
-                method: 'GET',
-            }).then(e => {
-                if (e.status === 200) {
-                    e.json().then(e => {
-                        let myJson = convertToJson(e);
-                        prepareTableData(myJson);
-                    })
-                }
-                else alert("cos poszlo nie tak")
-            })
-        } catch (e) {
-            console.log(e);
-        }
-    }
-
-    const convertToJson = (jsonString) => {
-        let someJson = JSON.parse(jsonString);
-        return someJson;
-    }    
+    };    
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -124,7 +39,7 @@ export const CSVParser = () => {
     };
 
     const toggleCharts = () => {
-        setIsTableDataSet(false);
+        setIsTableDataSet1D(false);
         setShowCharts(true);
     };
 
@@ -139,14 +54,6 @@ export const CSVParser = () => {
         <div style={{ marginTop: "3rem" }}>
             {error ? error : <div />}
         </div>
-        <select value={dropdownValue} onChange={handleDropdown}>
-            <option value="" selected disabled hidden>Choose variable</option>
-            {keys.map((o) => (
-                <option value={o}>{o}</option>
-                )
-            )
-            }
-        </select><br />
         <button onClick={requestStats}>Show table</button>
         <button onClick={toggleCharts}>show charts</button> 
     </div>

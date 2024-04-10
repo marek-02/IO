@@ -9,6 +9,6 @@ urlpatterns = [
     path('stats/2d/', generate_statistics_2d, name='generate 2d statistics'),
     path('delete/', delete_data, name='delete_data'),
     path('fill/missings/', fill_missing_data, name='fill missing data'),
-    path('fill/outliners', fill_outliers, name='fill outliners'),
+    path('fill/outliers/', fill_outliers, name='fill outliners'),
     path('result/', download_modified_dataframe, name='download result'),
 ]
