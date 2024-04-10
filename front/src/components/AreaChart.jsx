@@ -1,38 +1,122 @@
 'use client';
 import React, {useContext} from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    AreaChart,
+    Area
+  } from "recharts";
 import { DataContext } from '../contexts/DataContext';
 import { ChartPersonalizer } from './ChartPersonalizer';
 import { Stats } from './Stats';
 import { ChartContext } from '../contexts/ChartContext';
 
 export const AreaChartComponent = () => {
-    const { data, variable } = useContext(DataContext);
+    const { data, variable, showCharts, types } = useContext(DataContext);
 
     const { minIndex, maxIndex } = useContext(ChartContext);
 
-    return <div>
-        <ResponsiveContainer width="100%" aspect={3}>
-            <AreaChart width={730} height={250} data={data.slice(minIndex - 1, maxIndex)}
-            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            <defs>
-                <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                </linearGradient>
-            </defs>
-            <XAxis dataKey="ID" />
-            <YAxis />
-            <CartesianGrid strokeDasharray="3 3" />
-            <Tooltip />
-            <Area type="monotone" dataKey={variable} stroke="#8884d8" fillOpacity={1} fill="url(#colorUv)" />
-        </AreaChart>
-        </ResponsiveContainer>
-        <ChartPersonalizer></ChartPersonalizer>
-        <Stats></Stats>
-    </div> 
+    const data2 = [
+        {
+          ID: 0,
+          Zmienna_A: 4000,
+          Zmienna_B: 2400,
+          Zmienna_C: 2400
+        },
+        {
+          ID: 1,
+          Zmienna_A: 3000,
+          Zmienna_B: 1398,
+          Zmienna_C: 2210
+        }
+      ];
+
+      const groupValuesIntoBins = (data, variable, numBins) => {
+        const values = data.map(entry => entry[variable]);
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        const binSize = (maxValue - minValue) / numBins;
+      
+        const bins = Array.from({ length: numBins }, (_, i) => ({
+          bin: `${minValue + i * binSize} - ${minValue + (i + 1) * binSize}`,
+          count: 0
+        }));
+      
+        values.forEach(value => {
+          const binIndex = Math.floor((value - minValue) / binSize);
+          bins[binIndex].count++;
+        });
+      
+        return bins;
+      };
+
+
+    if (showCharts) {
+        const dataType = types[variable];
+
+        let chartComponent = null;
+
+        if (dataType === 'Int64') {
+            // Kategoryczna - wykres kolumnowy
+            chartComponent = (
+                <ResponsiveContainer width="100%" aspect={3}>
+                <BarChart
+                width={500}
+                height={300}
+                data={data2}
+                margin={{
+                    top: 5,
+                    right: 30,
+                    left: 20,
+                    bottom: 5
+                }}
+                barSize={20}
+                >
+                <XAxis dataKey="ID" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <CartesianGrid strokeDasharray="3 3" />
+                <Bar dataKey="Zmienna_A" fill="#8884d8" background={{ fill: "#eee" }} />
+                </BarChart>
+                </ResponsiveContainer>
+            );
+        } else {
+            // Inne - histogram
+            const numBins = 10
+            const bins = groupValuesIntoBins(data2, 'Zmienna_A', numBins);
+            chartComponent = (
+                <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                    data={bins}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bin" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill="#8884d8" name="Liczba wystąpień" />
+                </BarChart>
+                </ResponsiveContainer>
+            );
+            // boxplot
+        }
+
+        return (
+            <div>
+                {chartComponent}
+                <ChartPersonalizer />
+                <Stats />
+            </div>
+        );
+    } else {
+        return <div></div>;
+    }
 }

@@ -46,6 +46,8 @@ export const DataContextProvider = (props) => {
 
     const [isTableDataSet, setIsTableDataSet] = useState(false);
 
+    const [showCharts, setShowCharts] = useState(false);
+
     const handleFileChange = (e) => {
         setError("");
 
@@ -63,7 +65,7 @@ export const DataContextProvider = (props) => {
         }
     };
 
-    const contextValue = {file, data, error, keys, types, variable, dropdownValue, size, tableData, isTableDataSet, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize, setTableData, setIsTableDataSet}
+    const contextValue = {file, data, error, keys, types, variable, dropdownValue, size, tableData, isTableDataSet, showCharts, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize, setTableData, setIsTableDataSet, setShowCharts}
     return (
         <DataContext.Provider value={contextValue}>
             {props.children}

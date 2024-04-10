@@ -4,7 +4,7 @@ import { ChartContext } from '../contexts/ChartContext';
 
 export const CSVParser = () => {
 
-    const { file, error, keys, types, dropdownValue, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize, setTableData, setIsTableDataSet } = useContext(DataContext);
+    const { file, error, keys, types, dropdownValue, handleFileChange, setVariable, setData, setKeys, setValue, setTypes, setSize, setTableData, setIsTableDataSet, setShowCharts } = useContext(DataContext);
 
     const { setMaxIndex } = useContext(ChartContext);
 
@@ -84,6 +84,7 @@ export const CSVParser = () => {
             })
         }
         setTableData(newTableData);
+        setShowCharts(false);
         setIsTableDataSet(true);
     }
 
@@ -122,6 +123,11 @@ export const CSVParser = () => {
         else alert("Proszę wprowadzić plik");
     };
 
+    const toggleCharts = () => {
+        setIsTableDataSet(false);
+        setShowCharts(true);
+    };
+
     return <div> 
         <div className="container">
             <form method='POST' onSubmit={handleSubmit}>
@@ -142,5 +148,6 @@ export const CSVParser = () => {
             }
         </select><br />
         <button onClick={requestStats}>Show table</button>
+        <button onClick={toggleCharts}>show charts</button> 
     </div>
 }
